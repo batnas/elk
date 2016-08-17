@@ -6,8 +6,9 @@ require "logstash/namespace"
 #
 # Many logs contain MAC addresses, but they can arrive in several different
 # formats, such as colon-delimited (00:11:22:aa:bb:cc), hyphen-delimited, Cisco
-# format (aabb.ccdd.1122), or just plain hex (001122334455). They can also be
-# uppercase, lowercase or mixed. This is especially problematic in logs such as
+# format (aabb.ccdd.1122), some HP format (aabb-ccdd-1122),
+# or just plain hex (001122334455). They can also be uppercase, lowercase or
+# mixed. This is especially problematic in logs such as
 # from a RADIUS server where clients are not all under local control and can
 # contain many different formats. This filter makes it easy to convert MAC
 # addresses into the same pattern to make searching easier.
@@ -94,6 +95,11 @@ class LogStash::Filters::SanitizeMac < LogStash::Filters::Base
       # looks cisco dot-delimited?
       elsif event[field] =~ /^[0-9a-f]{1,4}\.[0-9a-f]{1,4}\.[0-9a-f]{1,4}$/i
         words = event[field].split(".")
+        mac = words.map { |o| (o.length < 4 ? ("000" + o)[-4..-1] : o) }.join
+
+      # Some HP equipment (eg: HP870) have MACs in the format "aabb-ccdd-1122"
+      elsif event[field] =~ /^[0-9a-f]{1,4}\-[0-9a-f]{1,4}\-[0-9a-f]{1,4}$/i
+        words = event[field].split("-")
         mac = words.map { |o| (o.length < 4 ? ("000" + o)[-4..-1] : o) }.join
 
       # last try; could just be 12-digit hex?
